@@ -55,7 +55,6 @@ class design(object):
             raise ValueError(
                 "length of design (orders) does not comply with experiment")
 
-
     def check_maxrep(self, maxrep):
         '''
         Function to check whether design does not exceed maximum repeats within design.
@@ -66,8 +65,10 @@ class design(object):
         '''
         for stim in range(self.experiment.n_stimuli):
             repcheck = not ''.join(
-                str(e) for e in [stim] * maxrep) in ''.join(str(e) for e in self.order)
-            if repcheck == False:
+                str(e) for e in [stim] *
+                maxrep) in ''.join(
+                str(e) for e in self.order)
+            if not repcheck:
                 break
 
         return repcheck
@@ -85,9 +86,9 @@ class design(object):
             return False
 
         close = np.isclose(np.array(self.experiment.P),
-                               np.array(obsprob), atol=0.001)
+                           np.array(obsprob), atol=0.001)
         if not np.sum(close) == len(obsprob):
-                return False
+            return False
 
         return True
 
@@ -155,11 +156,13 @@ class design(object):
         if self.experiment.restnum > 0:
             orderli = list(self.order)
             ITIli = list(self.ITI)
-            for x in np.arange(0, self.experiment.n_trials, self.experiment.restnum)[1:][::-1]:
+            for x in np.arange(0, self.experiment.n_trials,
+                               self.experiment.restnum)[1:][::-1]:
                 orderli.insert(x, "R")
                 ITIli.insert(x, self.experiment.restdur)
-            ITIli = [y+self.experiment.trial_duration  if not x == "R" else y for x, y in zip(orderli, ITIli)]
-            onsets = np.cumsum(ITIli)-self.experiment.trial_duration
+            ITIli = [y + self.experiment.trial_duration if not x ==
+                     "R" else y for x, y in zip(orderli, ITIli)]
+            onsets = np.cumsum(ITIli) - self.experiment.trial_duration
             self.onsets = [y for x, y in zip(orderli, onsets) if not x == "R"]
         else:
             ITIli = np.array(self.ITI) + self.experiment.trial_duration
@@ -167,14 +170,16 @@ class design(object):
         stimonsets = [x + self.experiment.t_pre for x in self.onsets]
 
         # round onsets to resolution
-        self.ITI, x = _round_to_resolution(self.ITI,self.experiment.resolution)
-        onsetX, XindStim = _round_to_resolution(stimonsets,self.experiment.resolution)
+        self.ITI, x = _round_to_resolution(
+            self.ITI, self.experiment.resolution)
+        onsetX, XindStim = _round_to_resolution(
+            stimonsets, self.experiment.resolution)
         stim_duration_tp = int(
             self.experiment.stim_duration / self.experiment.resolution)
 
         # find indices in resolution scale of stimuli
         assert(np.max(XindStim) <= self.experiment.n_tp)
-        assert(np.max(XindStim)+stim_duration_tp <= self.experiment.n_tp)
+        assert(np.max(XindStim) + stim_duration_tp <= self.experiment.n_tp)
 
         # create design matrix in resolution scale (=deltasM in Kao toolbox)
         X_X = np.zeros([self.experiment.n_tp, self.experiment.n_stimuli])
@@ -193,8 +198,12 @@ class design(object):
                         j] = X_X[:(self.experiment.n_tp - j), stim]
 
         # downsample and whiten deconvM
-        idxX = [int(x) for x in np.arange(0, self.experiment.n_tp,
-                                         self.experiment.TR / self.experiment.resolution)]
+        idxX = [
+            int(x) for x in np.arange(
+                0,
+                self.experiment.n_tp,
+                self.experiment.TR /
+                self.experiment.resolution)]
         deconvMdown = deconvM[idxX, :]
         Xwhite = np.dot(
             np.dot(t(deconvMdown), self.experiment.white), deconvMdown)
@@ -206,8 +215,12 @@ class design(object):
                 (stim + 1) * self.experiment.laghrf)].dot(self.experiment.basishrf)
 
         # downsample to TR
-        idx = [int(x) for x in np.arange(0, self.experiment.n_tp,
-                                         self.experiment.TR / self.experiment.resolution)]
+        idx = [
+            int(x) for x in np.arange(
+                0,
+                self.experiment.n_tp,
+                self.experiment.TR /
+                self.experiment.resolution)]
 
         X_Z = X_Z[idx, :]
         X_X = X_X[idx, :]
@@ -239,7 +252,7 @@ class design(object):
         invM = np.array(invM)
         st1 = np.dot(self.CX, invM)
         CMC = np.dot(st1, t(self.CX))
-        if Aoptimality == True:
+        if Aoptimality:
             self.Fe = float(self.CX.shape[0] / np.matrix.trace(CMC))
         else:
             self.Fe = float(np.linalg.det(CMC)**(-1 / len(self.C)))
@@ -262,7 +275,7 @@ class design(object):
                 invM = np.nan
         invM = np.array(invM)
         CMC = np.matrix(self.C) * invM * np.matrix(t(self.C))
-        if Aoptimality == True:
+        if Aoptimality:
             self.Fd = float(len(self.C) / np.matrix.trace(CMC))
         else:
             self.Fd = float(np.linalg.det(CMC)**(-1 / len(self.C)))
@@ -300,12 +313,13 @@ class design(object):
         '''
         trialcount = Counter(self.order)
         Pobs = [trialcount[x] for x in range(self.experiment.n_stimuli)]
-        self.Ff = np.sum(abs(np.array(
-            Pobs) - np.array(self.experiment.n_trials * np.array(self.experiment.P))))
+        self.Ff = np.sum(abs(np.array(Pobs) -
+                             np.array(self.experiment.n_trials *
+                                      np.array(self.experiment.P))))
         self.Ff = 1 - self.Ff / self.experiment.FfMax
         return self
 
-    def FCalc(self, weights,Aoptimality=True,confoundorder=3):
+    def FCalc(self, weights, Aoptimality=True, confoundorder=3):
         '''
         Compute weighted average of efficiencies.
 
@@ -313,9 +327,9 @@ class design(object):
         :type weights: list of floats
         '''
 
-        if weights[0]>0:
+        if weights[0] > 0:
             self.FeCalc(Aoptimality)
-        if weights[1]>0:
+        if weights[1] > 0:
             self.FdCalc(Aoptimality)
         self.FfCalc()
         self.FcCalc(confoundorder)
@@ -372,7 +386,32 @@ class experiment(object):
 
     '''
 
-    def __init__(self, TR, P, C, rho, stim_duration, n_stimuli, ITImodel=None, ITImin=None, ITImax=None, ITImean=None, restnum=0, restdur=0, t_pre=0, t_post=0, n_trials=None, duration=None, resolution=0.1, FeMax=1, FdMax=1, FcMax=1, FfMax=1, maxrep=None, hardprob=False, confoundorder=3):
+    def __init__(
+            self,
+            TR,
+            P,
+            C,
+            rho,
+            stim_duration,
+            n_stimuli,
+            ITImodel=None,
+            ITImin=None,
+            ITImax=None,
+            ITImean=None,
+            restnum=0,
+            restdur=0,
+            t_pre=0,
+            t_post=0,
+            n_trials=None,
+            duration=None,
+            resolution=0.1,
+            FeMax=1,
+            FdMax=1,
+            FcMax=1,
+            FfMax=1,
+            maxrep=None,
+            hardprob=False,
+            confoundorder=3):
         self.TR = TR
         self.P = P
         self.C = np.array(C)
@@ -406,7 +445,9 @@ class experiment(object):
         # make sure resolution is a divisor of TR (up to )
         if not np.isclose(self.TR % self.resolution, 0):
             self.resolution = _find_new_resolution(self.TR, self.resolution)
-            warnings.warn("Warning: the resolution is adjusted to be a multiple of the TR.  New resolution: %f" % self.resolution)
+            warnings.warn(
+                "Warning: the resolution is adjusted to be a multiple of the TR.  New resolution: %f" %
+                self.resolution)
 
         self.countstim()
         self.CreateTsComp()
@@ -419,7 +460,7 @@ class experiment(object):
         '''
         NulDesign = design(
             order=[np.argmin(self.P)] * self.n_trials,
-            ITI=[0]+[self.ITImean] * (self.n_trials-1),
+            ITI=[0] + [self.ITImean] * (self.n_trials - 1),
             experiment=self
         )
         NulDesign.designmatrix()
@@ -491,12 +532,12 @@ class experiment(object):
         # contrasts
         # expand contrasts to resolution
         self.CX = np.array(np.kron(self.C, np.eye(self.laghrf)))
-        assert(self.CX.shape[0]==self.C.shape[0]*self.laghrf)
-        assert(self.CX.shape[1]==self.n_stimuli*self.laghrf)
+        assert(self.CX.shape[0] == self.C.shape[0] * self.laghrf)
+        assert(self.CX.shape[1] == self.n_stimuli * self.laghrf)
 
         # drift
         self.S = self.drift(np.arange(0, self.n_scans))  # [tp x 1]
-        assert(self.S.shape == (3,self.n_scans))
+        assert(self.S.shape == (3, self.n_scans))
         self.S = np.matrix(self.S)
 
         # square of the whitening matrix
@@ -593,7 +634,23 @@ class optimisation(object):
     :type optimisation: string
     '''
 
-    def __init__(self, experiment, weights, preruncycles, cycles, seed=None, I=4, G=20, R=[0.4, 0.4, 0.2], q=0.01, Aoptimality=True, folder=None, outdes=3, convergence=1000,optimisation='GA'):
+    def __init__(self,
+                 experiment,
+                 weights,
+                 preruncycles,
+                 cycles,
+                 seed=None,
+                 I=4,
+                 G=20,
+                 R=[0.4,
+                    0.4,
+                    0.2],
+                 q=0.01,
+                 Aoptimality=True,
+                 folder=None,
+                 outdes=3,
+                 convergence=1000,
+                 optimisation='GA'):
 
         self.exp = experiment
         self.G = G
@@ -640,11 +697,11 @@ class optimisation(object):
         '''
         # weights
 
-        if weights == None:
+        if weights is None:
             weights = self.weights
 
         # check maxrep, hardprob, every stimulus at least once
-        if not self.exp.maxrep == None:
+        if self.exp.maxrep is not None:
             if not design.check_maxrep(self.exp.maxrep):
                 return False
         if self.exp.hardprob:
@@ -656,9 +713,12 @@ class optimisation(object):
         # develop
 
         out = design.designmatrix()
-        if out == False:
+        if not out:
             return False
-        design.FCalc(weights,confoundorder=self.exp.confoundorder,Aoptimality=self.Aoptimality)
+        design.FCalc(
+            weights,
+            confoundorder=self.exp.confoundorder,
+            Aoptimality=self.Aoptimality)
         if np.isnan(design.F):
             return False
 
@@ -676,7 +736,7 @@ class optimisation(object):
         :type seed: integer or None
         '''
         # weights
-        if weights == None:
+        if weights is None:
             weights = self.weights
 
         if not R:
@@ -696,9 +756,14 @@ class optimisation(object):
             ind = np.sum(NDes >= np.cumsum(R))
             ordertype = ['blocked', 'random', 'msequence'][ind]
 
-            order = generate.order(self.exp.n_stimuli, self.exp.n_trials,
-                                   self.exp.P, ordertype=ordertype, seed=self.seed)
-            ITI,ITIlam = generate.iti(ntrials=self.exp.n_trials, model=self.exp.ITImodel, min=self.exp.ITImin, max=self.exp.ITImax, mean=self.exp.ITImean, lam=self.exp.ITIlam, seed=self.seed,resolution=self.exp.resolution)
+            order = generate.order(
+                self.exp.n_stimuli,
+                self.exp.n_trials,
+                self.exp.P,
+                ordertype=ordertype,
+                seed=self.seed)
+            ITI, ITIlam = generate.iti(ntrials=self.exp.n_trials, model=self.exp.ITImodel, min=self.exp.ITImin, max=self.exp.ITImax,
+                                       mean=self.exp.ITImean, lam=self.exp.ITIlam, seed=self.seed, resolution=self.exp.resolution)
 
             if ITIlam:
                 self.exp.ITIlam = ITIlam
@@ -706,7 +771,7 @@ class optimisation(object):
             des = design(order=order, ITI=ITI, experiment=self.exp)
 
             fulldes = self.check_develop(des, weights)
-            if fulldes == False:
+            if not fulldes:
                 continue
             else:
                 self.designs.append(fulldes)
@@ -714,7 +779,7 @@ class optimisation(object):
 
         return self
 
-    def _clean_designs(self,weights,seed):
+    def _clean_designs(self, weights, seed):
         n = 0
         rm = 0
         while n == 0:
@@ -731,14 +796,14 @@ class optimisation(object):
                     ind = np.where(isone)
                     remove = ind[1][ind[0] == ind[0][0]]
                     self.designs = [des for ind, des in enumerate(
-                        self.designs) if not ind in remove]
+                        self.designs) if ind not in remove]
                     rm = rm + len(remove)
 
         self.add_new_designs(R=[0, rm, 0], weights=weights)
 
         return self
 
-    def _mutation(self,weights,seed):
+    def _mutation(self, weights, seed):
         # Mutation:
         # if: Best design: stay untouched
         # elif Correlation between all is > 0.8: mutate with 20% mutations
@@ -765,14 +830,14 @@ class optimisation(object):
                 offspring = design.mutation(self.q, seed=seed)
                 offspring = self.check_develop(offspring, weights)
 
-            if offspring == False:
+            if not offspring:
                 continue
             else:
                 self.designs[idx] = offspring
 
         return self
 
-    def _crossover(self,weights,seed):
+    def _crossover(self, weights, seed):
         # select designs with F>median(F):
         efficiencies = [x.F for x in self.designs]
         #crossind = [ind for ind,val in enumerate(efficiencies) if val >= np.median(efficiencies)]
@@ -795,7 +860,7 @@ class optimisation(object):
                 self.designs[couple[1]], seed=seed)
             for baby in [baby1, baby2]:
                 baby = self.check_develop(baby, weights)
-                if baby == False:
+                if not baby:
                     continue
                 else:
                     self.designs.append(baby)
@@ -803,13 +868,13 @@ class optimisation(object):
 
         return self
 
-    def _immigration(self,weights,noim):
+    def _immigration(self, weights, noim):
         R = np.ceil(np.array(self.R) * noim).tolist()
         self.add_new_designs(R=R, weights=weights)
 
         return self
 
-    def to_next_generation(self, weights=None, seed=1234,optimisation=None):
+    def to_next_generation(self, weights=None, seed=1234, optimisation=None):
         '''
         This function goes from one generation to the next.
 
@@ -821,23 +886,23 @@ class optimisation(object):
         :type optimisation: string
         '''
 
-        if optimisation == None:
+        if optimisation is None:
             optimisation = self.optimisation
 
         # weights
-        if weights == None:
+        if weights is None:
             weights = self.weights
 
-        self._clean_designs(weights,seed)
+        self._clean_designs(weights, seed)
 
         # remove duplicates and replace by random designs
         if optimisation == 'GA':
-            self._mutation(weights,seed)
-            self._crossover(weights,seed)
-            self._immigration(weights,noim=self.I)
+            self._mutation(weights, seed)
+            self._crossover(weights, seed)
+            self._immigration(weights, noim=self.I)
 
         elif optimisation == 'simulation':
-            self._immigration(weights,noim=self.I)
+            self._immigration(weights, noim=self.I)
 
         else:
             print("Unknown optimisation type")
@@ -884,7 +949,7 @@ class optimisation(object):
 
         return self
 
-    def optimise(self,optimisation='GA'):
+    def optimise(self, optimisation='GA'):
         '''
         Function to run design optimization
         '''
@@ -923,7 +988,7 @@ class optimisation(object):
         for generation in bar(range(self.cycles)):
             self.to_next_generation(seed=self.seed)
             if self.finished:
-                    continue
+                continue
 
         return self
 
@@ -938,25 +1003,26 @@ class optimisation(object):
             for stim in range(shape[1]):
                 hrf = hrf + self.designs[d].Xconv[:, stim].tolist()
             des[:, d] = hrf
-        clus = sklearn.cluster.k_means(des.T, self.outdes,random_state=self.seed)[1]
+        clus = sklearn.cluster.k_means(
+            des.T, self.outdes, random_state=self.seed)[1]
         out = []
         des = []
         cl = []
         first = 0
         for c in range(self.outdes):
-            ids = np.where(clus==c)[0]
+            ids = np.where(clus == c)[0]
             id_ordered = ids[np.flipud(np.argsort(efficiencies[ids]))]
             out.append(first)
             for d in id_ordered:
                 cl.append(c)
                 des.append(self.designs[d])
-                first = first+1
+                first = first + 1
         self.designs = des
         self.out = out
         self.clus = cl
 
         signals = [x.Xconv for x in self.designs]
-        co = self.pearsonr(signals,3)
+        co = self.pearsonr(signals, 3)
         self.cov = co
 
         return self
@@ -965,7 +1031,7 @@ class optimisation(object):
         if not self.folder:
             raise ValueError('No folder defined to download output.')
         else:
-            if self.cov==None:
+            if self.cov is None:
                 self.evaluate()
 
             # empty folder
@@ -1040,29 +1106,32 @@ class optimisation(object):
                 varcov[sig2, sig1] = np.mean(cors)
         return varcov
 
-def _change_resolution(inputmatrix,start=1,goal=0.1):#for example
-    newmat = inputmatrix/goal
 
-def _find_new_resolution(TR,res):
-    n = TR*1000.
+def _change_resolution(inputmatrix, start=1, goal=0.1):  # for example
+    newmat = inputmatrix / goal
+
+
+def _find_new_resolution(TR, res):
+    n = TR * 1000.
     # find divisors of TR*1000
     large_divisors = []
     for i in range(1, int(math.sqrt(n) + 1)):
         if n % i == 0:
             large_divisors.append(i)
-            if i*i != n:
+            if i * i != n:
                 large_divisors.append(int(n / i))
     sorted = np.sort(large_divisors)
     # closest to res
-    resdivisor = TR/float(res)
-    difs = np.abs(resdivisor-sorted)
-    minind = np.where(difs==np.min(difs))[0]
+    resdivisor = TR / float(res)
+    difs = np.abs(resdivisor - sorted)
+    minind = np.where(difs == np.min(difs))[0]
     divisor = sorted[minind][0]
-    newres = TR/divisor
+    newres = TR / divisor
     return newres
 
-def _round_to_resolution(inmat,res):
-    out = res*np.floor(np.array(inmat)/res)
-    ind = out/res
+
+def _round_to_resolution(inmat, res):
+    out = res * np.floor(np.array(inmat) / res)
+    ind = out / res
     ind = [int(x) for x in ind]
     return out, ind
