@@ -18,6 +18,5 @@ setup(name='neurodesign',
           'matplotlib',
           'seaborn'
           ],
-      package_dir={'neurodesign':'src'},
       package_data={'neurodesign':['media/NeuroDes.png']},
       zip_safe=False)
