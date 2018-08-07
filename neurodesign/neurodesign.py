@@ -80,7 +80,7 @@ class design(object):
         :returns probcheck: Boolean indicating probabilities are respected
         '''
 
-        obscnt = Counter(self.order).values()
+        obscnt = list(Counter(self.order).values())
         obsprob = np.round(obscnt / np.sum(obscnt), decimals=2)
         if not len(self.experiment.P) == len(obsprob):
             return False
